@@ -5,10 +5,8 @@ import (
 	"os/exec"
 	"sync"
 	"testing"
-
 	"github.com/stretchr/testify/assert"
-
-	"github.com/xfrr/goffmpeg/transcoder"
+	"github.com/r6c/goffmpeg/transcoder"
 )
 
 func TestInputNotFound(t *testing.T) {

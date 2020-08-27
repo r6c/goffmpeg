@@ -12,9 +12,9 @@ type Mediafile struct {
 	aspect                string
 	resolution            string
 	videoBitRate          string
-	videoBitRateTolerance int
-	videoMaxBitRate       int
-	videoMinBitrate       int
+	videoBitRateTolerance string
+	videoMaxBitRate       string
+	videoMinBitrate       string
 	videoCodec            string
 	vframes               int
 	frameRate             int
@@ -27,7 +27,7 @@ type Mediafile struct {
 	audioChannels         int
 	audioVariableBitrate  bool
 	bufferSize            int
-	threadset             bool
+	threadset             string
 	threads               int
 	preset                string
 	tune                  string
@@ -63,6 +63,8 @@ type Mediafile struct {
 	hlsSegmentDuration    int
 	hlsMasterPlaylistName string
 	hlsSegmentFilename    string
+	hlsKeyInfoFile        string
+	hlsInitTime           int
 	httpMethod            string
 	httpKeepAlive         bool
 	hwaccel               string
@@ -109,15 +111,15 @@ func (m *Mediafile) SetVideoBitRate(v string) {
 	m.videoBitRate = v
 }
 
-func (m *Mediafile) SetVideoBitRateTolerance(v int) {
+func (m *Mediafile) SetVideoBitRateTolerance(v string) {
 	m.videoBitRateTolerance = v
 }
 
-func (m *Mediafile) SetVideoMaxBitrate(v int) {
+func (m *Mediafile) SetVideoMaxBitrate(v string) {
 	m.videoMaxBitRate = v
 }
 
-func (m *Mediafile) SetVideoMinBitRate(v int) {
+func (m *Mediafile) SetVideoMinBitRate(v string) {
 	m.videoMinBitrate = v
 }
 
@@ -169,7 +171,7 @@ func (m *Mediafile) SetPixFmt(v string) {
 	m.pixFmt = v
 }
 
-func (m *Mediafile) SetBufferSize(v int) {
+func (m *Mediafile) SetBufferSize(v string) {
 	m.bufferSize = v
 }
 
@@ -295,6 +297,14 @@ func (m *Mediafile) SetHlsSegmentDuration(val int) {
 	m.hlsSegmentDuration = val
 }
 
+func (m *Mediafile) SetHlsInitTime(val int) {
+	m.hlsInitTime = val
+}
+
+func (m *Mediafile) SetHlsKeyInfoFile(val string) {
+	m.hlsKeyInfoFile = val
+}
+
 func (m *Mediafile) SetHlsPlaylistType(val string) {
 	m.hlsPlaylistType = val
 }
@@ -390,15 +400,15 @@ func (m *Mediafile) VideoBitrate() string {
 	return m.videoBitRate
 }
 
-func (m *Mediafile) VideoBitRateTolerance() int {
+func (m *Mediafile) VideoBitRateTolerance() string {
 	return m.videoBitRateTolerance
 }
 
-func (m *Mediafile) VideoMaxBitRate() int {
+func (m *Mediafile) VideoMaxBitRate() string {
 	return m.videoMaxBitRate
 }
 
-func (m *Mediafile) VideoMinBitRate() int {
+func (m *Mediafile) VideoMinBitRate() string {
 	return m.videoMinBitrate
 }
 
@@ -446,7 +456,7 @@ func (m *Mediafile) AudioChannels() int {
 	return m.audioChannels
 }
 
-func (m *Mediafile) BufferSize() int {
+func (m *Mediafile) BufferSize() string {
 	return m.bufferSize
 }
 
@@ -574,12 +584,21 @@ func (m *Mediafile) HlsSegmentDuration() int {
 	return m.hlsSegmentDuration
 }
 
+
 func (m *Mediafile) HlsMasterPlaylistName() string {
 	return m.hlsMasterPlaylistName
 }
 
 func (m *Mediafile) HlsSegmentFilename() string {
 	return m.hlsSegmentFilename
+}
+
+func (m *Mediafile) HlsHlsInitTime() int {
+	return m.hlsInitTime
+}
+
+func (m *Mediafile) HlsKeyInfoFile() string {
+	return m.hlsKeyInfoFile
 }
 
 func (m *Mediafile) HlsPlaylistType() string {
@@ -700,6 +719,8 @@ func (m *Mediafile) ToStrCommand() []string {
 		"OutputPipe",
 		"HlsListSize",
 		"HlsSegmentDuration",
+		"HlsInitTime",
+		"HlsKeyInfoFile",
 		"HlsPlaylistType",
 		"HlsMasterPlaylistName",
 		"HlsSegmentFilename",
@@ -887,29 +908,29 @@ func (m *Mediafile) ObtainAudioChannels() []string {
 }
 
 func (m *Mediafile) ObtainVideoMaxBitRate() []string {
-	if m.videoMaxBitRate != 0 {
-		return []string{"-maxrate", fmt.Sprintf("%dk", m.videoMaxBitRate)}
+	if m.videoMaxBitRate != "" {
+		return []string{"-maxrate", m.videoMaxBitRate}
 	}
 	return nil
 }
 
 func (m *Mediafile) ObtainVideoMinBitRate() []string {
-	if m.videoMinBitrate != 0 {
-		return []string{"-minrate", fmt.Sprintf("%dk", m.videoMinBitrate)}
+	if m.videoMinBitrate != "" {
+		return []string{"-minrate", m.videoMinBitrate}
 	}
 	return nil
 }
 
 func (m *Mediafile) ObtainBufferSize() []string {
-	if m.bufferSize != 0 {
-		return []string{"-bufsize", fmt.Sprintf("%dk", m.bufferSize)}
+	if m.bufferSize != "" {
+		return []string{"-bufsize", m.bufferSize}
 	}
 	return nil
 }
 
 func (m *Mediafile) ObtainVideoBitRateTolerance() []string {
-	if m.videoBitRateTolerance != 0 {
-		return []string{"-bt", fmt.Sprintf("%dk", m.videoBitRateTolerance)}
+	if m.videoBitRateTolerance != "" {
+		return []string{"-bt", m.videoBitRateTolerance}
 	}
 	return nil
 }
@@ -1079,6 +1100,14 @@ func (m *Mediafile) ObtainHlsSegmentDuration() []string {
 func (m *Mediafile) ObtainHlsMasterPlaylistName() []string {
 	if m.hlsMasterPlaylistName != "" {
 		return []string{"-master_pl_name", fmt.Sprintf("%s", m.hlsMasterPlaylistName)}
+    } else {
+		return nil
+	}
+}
+
+func (m *Mediafile) ObtainHlsInitTime() []string {
+	if m.hlsInitTime != 0 {
+		return []string{"-hls_init_time", fmt.Sprintf("%d", m.hlsInitTime)}
 	} else {
 		return nil
 	}
@@ -1087,6 +1116,14 @@ func (m *Mediafile) ObtainHlsMasterPlaylistName() []string {
 func (m *Mediafile) ObtainHlsSegmentFilename() []string {
 	if m.hlsSegmentFilename != "" {
 		return []string{"-hls_segment_filename", fmt.Sprintf("%s", m.hlsSegmentFilename)}
+    } else {
+		return nil
+	}
+}
+
+func (m *Mediafile) ObtainHlsKeyInfoFile() []string {
+	if m.hlsKeyInfoFile != "" {
+		return []string{"-hls_key_info_file", m.hlsKeyInfoFile}
 	} else {
 		return nil
 	}
@@ -1134,7 +1171,7 @@ func (m *Mediafile) ObtainSkipAudio() []string {
 
 func (m *Mediafile) ObtainStreamIds() []string {
 	if m.streamIds != nil && len(m.streamIds) != 0 {
-		result := []string{}
+		var result []string
 		for i, val := range m.streamIds {
 			result = append(result, []string{"-streamid", fmt.Sprintf("%d:%s", i, val)}...)
 		}
