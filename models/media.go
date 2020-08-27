@@ -26,8 +26,8 @@ type Mediafile struct {
 	audioBitrate          string
 	audioChannels         int
 	audioVariableBitrate  bool
-	bufferSize            int
-	threadset             string
+	bufferSize            string
+	threadset             bool
 	threads               int
 	preset                string
 	tune                  string
@@ -584,7 +584,6 @@ func (m *Mediafile) HlsSegmentDuration() int {
 	return m.hlsSegmentDuration
 }
 
-
 func (m *Mediafile) HlsMasterPlaylistName() string {
 	return m.hlsMasterPlaylistName
 }
@@ -1100,7 +1099,7 @@ func (m *Mediafile) ObtainHlsSegmentDuration() []string {
 func (m *Mediafile) ObtainHlsMasterPlaylistName() []string {
 	if m.hlsMasterPlaylistName != "" {
 		return []string{"-master_pl_name", fmt.Sprintf("%s", m.hlsMasterPlaylistName)}
-    } else {
+	} else {
 		return nil
 	}
 }
@@ -1116,7 +1115,7 @@ func (m *Mediafile) ObtainHlsInitTime() []string {
 func (m *Mediafile) ObtainHlsSegmentFilename() []string {
 	if m.hlsSegmentFilename != "" {
 		return []string{"-hls_segment_filename", fmt.Sprintf("%s", m.hlsSegmentFilename)}
-    } else {
+	} else {
 		return nil
 	}
 }
@@ -1190,10 +1189,10 @@ func (m *Mediafile) ObtainCompressionLevel() []string {
 func (m *Mediafile) ObtainMapMetadata() []string {
 	if m.mapMetadata != "" {
 		return []string{"-map_metadata", m.mapMetadata}
-  }
-  return nil
+	}
+	return nil
 }
-    
+
 func (m *Mediafile) ObtainEncryptionKey() []string {
 	if m.encryptionKey != "" {
 		return []string{"-hls_key_info_file", m.encryptionKey}
