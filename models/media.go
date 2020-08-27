@@ -2,6 +2,7 @@ package models
 
 import (
 	"fmt"
+	"io"
 	"reflect"
 	"strconv"
 	"strings"
@@ -24,7 +25,9 @@ type Mediafile struct {
 	audioCodec            string
 	audioBitrate          string
 	audioChannels         int
-	bufferSize            string
+	audioVariableBitrate  bool
+	bufferSize            int
+	threadset             string
 	threads               int
 	preset                string
 	tune                  string
@@ -34,12 +37,20 @@ type Mediafile struct {
 	duration              string
 	durationInput         string
 	seekTime              string
-	quality               int
+	qscale                uint32
+	crf                   uint32
 	strict                int
 	muxDelay              string
 	seekUsingTsInput      bool
 	seekTimeInput         string
 	inputPath             string
+	inputPipe             bool
+	inputPipeReader       io.ReadCloser
+	inputPipeWriter       io.Writer
+	outputPipe            bool
+	outputPipeReader      io.Reader
+	outputPipeWriter      io.WriteCloser
+	movFlags              string
 	hideBanner            bool
 	outputPath            string
 	outputFormat          string
@@ -50,16 +61,28 @@ type Mediafile struct {
 	hlsPlaylistType       string
 	hlsListSize           int
 	hlsSegmentDuration    int
+	hlsMasterPlaylistName string
+	hlsSegmentFilename    string
 	hlsKeyInfoFile        string
 	hlsInitTime           int
 	httpMethod            string
 	httpKeepAlive         bool
+	hwaccel               string
 	streamIds             map[int]string
 	metadata              Metadata
 	videoFilter           string
 	audioFilter           string
 	skipVideo             bool
 	skipAudio             bool
+	compressionLevel      int
+	mapMetadata           string
+	tags                  map[string]string
+	encryptionKey         string
+	movflags              string
+	bframe                int
+	pixFmt                string
+	rawInputArgs          []string
+	rawOutputArgs         []string
 }
 
 /*** SETTERS ***/
@@ -116,6 +139,10 @@ func (m *Mediafile) SetAudioRate(v int) {
 	m.audioRate = v
 }
 
+func (m *Mediafile) SetAudioVariableBitrate() {
+	m.audioVariableBitrate = true
+}
+
 func (m *Mediafile) SetMaxKeyFrame(v int) {
 	m.maxKeyframe = v
 }
@@ -140,11 +167,16 @@ func (m *Mediafile) SetAudioChannels(v int) {
 	m.audioChannels = v
 }
 
+func (m *Mediafile) SetPixFmt(v string) {
+	m.pixFmt = v
+}
+
 func (m *Mediafile) SetBufferSize(v string) {
 	m.bufferSize = v
 }
 
 func (m *Mediafile) SetThreads(v int) {
+	m.threadset = true
 	m.threads = v
 }
 
@@ -180,8 +212,13 @@ func (m *Mediafile) SetSeekTimeInput(v string) {
 	m.seekTimeInput = v
 }
 
-func (m *Mediafile) SetQuality(v int) {
-	m.quality = v
+// Q Scale must be integer between 1 to 31 - https://trac.ffmpeg.org/wiki/Encode/MPEG-4
+func (m *Mediafile) SetQScale(v uint32) {
+	m.qscale = v
+}
+
+func (m *Mediafile) SetCRF(v uint32) {
+	m.crf = v
 }
 
 func (m *Mediafile) SetStrict(v int) {
@@ -198,6 +235,34 @@ func (m *Mediafile) SetCopyTs(val bool) {
 
 func (m *Mediafile) SetInputPath(val string) {
 	m.inputPath = val
+}
+
+func (m *Mediafile) SetInputPipe(val bool) {
+	m.inputPipe = val
+}
+
+func (m *Mediafile) SetInputPipeReader(r io.ReadCloser) {
+	m.inputPipeReader = r
+}
+
+func (m *Mediafile) SetInputPipeWriter(w io.Writer) {
+	m.inputPipeWriter = w
+}
+
+func (m *Mediafile) SetOutputPipe(val bool) {
+	m.outputPipe = val
+}
+
+func (m *Mediafile) SetOutputPipeReader(r io.Reader) {
+	m.outputPipeReader = r
+}
+
+func (m *Mediafile) SetOutputPipeWriter(w io.WriteCloser) {
+	m.outputPipeWriter = w
+}
+
+func (m *Mediafile) SetMovFlags(val string) {
+	m.movFlags = val
 }
 
 func (m *Mediafile) SetHideBanner(val bool) {
@@ -244,12 +309,24 @@ func (m *Mediafile) SetHlsPlaylistType(val string) {
 	m.hlsPlaylistType = val
 }
 
+func (m *Mediafile) SetHlsMasterPlaylistName(val string) {
+	m.hlsMasterPlaylistName = val
+}
+
+func (m *Mediafile) SetHlsSegmentFilename(val string) {
+	m.hlsSegmentFilename = val
+}
+
 func (m *Mediafile) SetHttpMethod(val string) {
 	m.httpMethod = val
 }
 
 func (m *Mediafile) SetHttpKeepAlive(val bool) {
 	m.httpKeepAlive = val
+}
+
+func (m *Mediafile) SetHardwareAcceleration(val string) {
+	m.hwaccel = val
 }
 
 func (m *Mediafile) SetInputInitialOffset(val string) {
@@ -270,6 +347,30 @@ func (m *Mediafile) SetSkipAudio(val bool) {
 
 func (m *Mediafile) SetMetadata(v Metadata) {
 	m.metadata = v
+}
+
+func (m *Mediafile) SetCompressionLevel(val int) {
+	m.compressionLevel = val
+}
+
+func (m *Mediafile) SetMapMetadata(val string) {
+	m.mapMetadata = val
+}
+
+func (m *Mediafile) SetTags(val map[string]string) {
+	m.tags = val
+}
+
+func (m *Mediafile) SetBframe(v int) {
+	m.bframe = v
+}
+
+func (m *Mediafile) SetRawInputArgs(args []string) {
+	m.rawInputArgs = args
+}
+
+func (m *Mediafile) SetRawOutputArgs(args []string) {
+	m.rawOutputArgs = args
 }
 
 /*** GETTERS ***/
@@ -321,6 +422,10 @@ func (m *Mediafile) Vframes() int {
 
 func (m *Mediafile) FrameRate() int {
 	return m.frameRate
+}
+
+func (m *Mediafile) GetPixFmt() string {
+	return m.pixFmt
 }
 
 func (m *Mediafile) AudioRate() int {
@@ -395,8 +500,12 @@ func (m *Mediafile) SeekTimeInput() string {
 	return m.seekTimeInput
 }
 
-func (m *Mediafile) Quality() int {
-	return m.quality
+func (m *Mediafile) QScale() uint32 {
+	return m.qscale
+}
+
+func (m *Mediafile) CRF() uint32 {
+	return m.crf
 }
 
 func (m *Mediafile) Strict() int {
@@ -417,6 +526,34 @@ func (m *Mediafile) CopyTs() bool {
 
 func (m *Mediafile) InputPath() string {
 	return m.inputPath
+}
+
+func (m *Mediafile) InputPipe() bool {
+	return m.inputPipe
+}
+
+func (m *Mediafile) InputPipeReader() io.ReadCloser {
+	return m.inputPipeReader
+}
+
+func (m *Mediafile) InputPipeWriter() io.Writer {
+	return m.inputPipeWriter
+}
+
+func (m *Mediafile) OutputPipe() bool {
+	return m.outputPipe
+}
+
+func (m *Mediafile) OutputPipeReader() io.Reader {
+	return m.outputPipeReader
+}
+
+func (m *Mediafile) OutputPipeWriter() io.WriteCloser {
+	return m.outputPipeWriter
+}
+
+func (m *Mediafile) MovFlags() string {
+	return m.movFlags
 }
 
 func (m *Mediafile) HideBanner() bool {
@@ -447,6 +584,15 @@ func (m *Mediafile) HlsSegmentDuration() int {
 	return m.hlsSegmentDuration
 }
 
+
+func (m *Mediafile) HlsMasterPlaylistName() string {
+	return m.hlsMasterPlaylistName
+}
+
+func (m *Mediafile) HlsSegmentFilename() string {
+	return m.hlsSegmentFilename
+}
+
 func (m *Mediafile) HlsHlsInitTime() int {
 	return m.hlsInitTime
 }
@@ -471,6 +617,10 @@ func (m *Mediafile) HttpKeepAlive() bool {
 	return m.httpKeepAlive
 }
 
+func (m *Mediafile) HardwareAcceleration() string {
+	return m.hwaccel
+}
+
 func (m *Mediafile) StreamIds() map[int]string {
 	return m.streamIds
 }
@@ -487,6 +637,34 @@ func (m *Mediafile) Metadata() Metadata {
 	return m.metadata
 }
 
+func (m *Mediafile) CompressionLevel() int {
+	return m.compressionLevel
+}
+
+func (m *Mediafile) MapMetadata() string {
+	return m.mapMetadata
+}
+
+func (m *Mediafile) Tags() map[string]string {
+	return m.tags
+}
+
+func (m *Mediafile) SetEncryptionKey(v string) {
+	m.encryptionKey = v
+}
+
+func (m *Mediafile) EncryptionKey() string {
+	return m.encryptionKey
+}
+
+func (m *Mediafile) RawInputArgs() []string {
+	return m.rawInputArgs
+}
+
+func (m *Mediafile) RawOutputArgs() []string {
+	return m.rawOutputArgs
+}
+
 /** OPTS **/
 func (m *Mediafile) ToStrCommand() []string {
 	var strCommand []string
@@ -498,9 +676,11 @@ func (m *Mediafile) ToStrCommand() []string {
 		"DurationInput",
 		"RtmpLive",
 		"InputInitialOffset",
+		"HardwareAcceleration",
+		"RawInputArgs",
 		"InputPath",
+		"InputPipe",
 		"HideBanner",
-
 		"Aspect",
 		"Resolution",
 		"FrameRate",
@@ -518,31 +698,45 @@ func (m *Mediafile) ToStrCommand() []string {
 		"AudioChannels",
 		"AudioProfile",
 		"SkipAudio",
-		"Quality",
+		"CRF",
+		"QScale",
 		"Strict",
 		"BufferSize",
 		"MuxDelay",
 		"Threads",
 		"KeyframeInterval",
 		"Preset",
+		"PixFmt",
 		"Tune",
 		"Target",
 		"SeekTime",
 		"Duration",
 		"CopyTs",
 		"StreamIds",
+		"MovFlags",
+		"RawOutputArgs",
 		"OutputFormat",
+		"OutputPipe",
 		"HlsListSize",
 		"HlsSegmentDuration",
 		"HlsInitTime",
 		"HlsKeyInfoFile",
 		"HlsPlaylistType",
+		"HlsMasterPlaylistName",
+		"HlsSegmentFilename",
 		"AudioFilter",
 		"VideoFilter",
 		"HttpMethod",
 		"HttpKeepAlive",
+		"CompressionLevel",
+		"MapMetadata",
+		"Tags",
+		"EncryptionKey",
 		"OutputPath",
+		"Bframe",
+		"MovFlags",
 	}
+
 	for _, name := range opts {
 		opt := reflect.ValueOf(m).MethodByName(fmt.Sprintf("Obtain%s", name))
 		if (opt != reflect.Value{}) {
@@ -588,8 +782,39 @@ func (m *Mediafile) ObtainAspect() []string {
 	return nil
 }
 
+func (m *Mediafile) ObtainHardwareAcceleration() []string {
+	if m.hwaccel != "" {
+		return []string{"-hwaccel", m.hwaccel}
+	}
+	return nil
+}
+
 func (m *Mediafile) ObtainInputPath() []string {
-	return []string{"-i", m.inputPath}
+	if m.inputPath != "" {
+		return []string{"-i", m.inputPath}
+	}
+	return nil
+}
+
+func (m *Mediafile) ObtainInputPipe() []string {
+	if m.inputPipe {
+		return []string{"-i", "pipe:0"}
+	}
+	return nil
+}
+
+func (m *Mediafile) ObtainOutputPipe() []string {
+	if m.outputPipe {
+		return []string{"pipe:1"}
+	}
+	return nil
+}
+
+func (m *Mediafile) ObtainMovFlags() []string {
+	if m.movFlags != "" {
+		return []string{"-movflags", m.movFlags}
+	}
+	return nil
 }
 
 func (m *Mediafile) ObtainHideBanner() []string {
@@ -607,7 +832,10 @@ func (m *Mediafile) ObtainNativeFramerateInput() []string {
 }
 
 func (m *Mediafile) ObtainOutputPath() []string {
-	return []string{m.outputPath}
+	if m.outputPath != "" {
+		return []string{m.outputPath}
+	}
+	return nil
 }
 
 func (m *Mediafile) ObtainVideoCodec() []string {
@@ -660,10 +888,16 @@ func (m *Mediafile) ObtainAudioCodec() []string {
 }
 
 func (m *Mediafile) ObtainAudioBitRate() []string {
-	if m.audioBitrate != "" {
+	switch {
+	case !m.audioVariableBitrate && m.audioBitrate != "":
 		return []string{"-b:a", m.audioBitrate}
+	case m.audioVariableBitrate && m.audioBitrate != "":
+		return []string{"-q:a", m.audioBitrate}
+	case m.audioVariableBitrate:
+		return []string{"-q:a", "0"}
+	default:
+		return nil
 	}
-	return nil
 }
 
 func (m *Mediafile) ObtainAudioChannels() []string {
@@ -702,7 +936,7 @@ func (m *Mediafile) ObtainVideoBitRateTolerance() []string {
 }
 
 func (m *Mediafile) ObtainThreads() []string {
-	if m.threads != 0 {
+	if m.threadset {
 		return []string{"-threads", fmt.Sprintf("%d", m.threads)}
 	}
 	return nil
@@ -764,9 +998,16 @@ func (m *Mediafile) ObtainTune() []string {
 	return nil
 }
 
-func (m *Mediafile) ObtainQuality() []string {
-	if m.quality != 0 {
-		return []string{"-crf", fmt.Sprintf("%d", m.quality)}
+func (m *Mediafile) ObtainCRF() []string {
+	if m.crf != 0 {
+		return []string{"-crf", fmt.Sprintf("%d", m.crf)}
+	}
+	return nil
+}
+
+func (m *Mediafile) ObtainQScale() []string {
+	if m.qscale != 0 {
+		return []string{"-qscale", fmt.Sprintf("%d", m.qscale)}
 	}
 	return nil
 }
@@ -856,10 +1097,26 @@ func (m *Mediafile) ObtainHlsSegmentDuration() []string {
 	}
 }
 
+func (m *Mediafile) ObtainHlsMasterPlaylistName() []string {
+	if m.hlsMasterPlaylistName != "" {
+		return []string{"-master_pl_name", fmt.Sprintf("%s", m.hlsMasterPlaylistName)}
+    } else {
+		return nil
+	}
+}
+
 func (m *Mediafile) ObtainHlsInitTime() []string {
 	if m.hlsInitTime != 0 {
 		return []string{"-hls_init_time", fmt.Sprintf("%d", m.hlsInitTime)}
 	} else {
+		return nil
+	}
+}
+
+func (m *Mediafile) ObtainHlsSegmentFilename() []string {
+	if m.hlsSegmentFilename != "" {
+		return []string{"-hls_segment_filename", fmt.Sprintf("%s", m.hlsSegmentFilename)}
+    } else {
 		return nil
 	}
 }
@@ -875,6 +1132,14 @@ func (m *Mediafile) ObtainHlsKeyInfoFile() []string {
 func (m *Mediafile) ObtainHttpMethod() []string {
 	if m.httpMethod != "" {
 		return []string{"-method", m.httpMethod}
+	} else {
+		return nil
+	}
+}
+
+func (m *Mediafile) ObtainPixFmt() []string {
+	if m.pixFmt != "" {
+		return []string{"-pix_fmt", m.pixFmt}
 	} else {
 		return nil
 	}
@@ -913,4 +1178,52 @@ func (m *Mediafile) ObtainStreamIds() []string {
 		return result
 	}
 	return nil
+}
+
+func (m *Mediafile) ObtainCompressionLevel() []string {
+	if m.compressionLevel != 0 {
+		return []string{"-compression_level", fmt.Sprintf("%d", m.compressionLevel)}
+	}
+	return nil
+}
+
+func (m *Mediafile) ObtainMapMetadata() []string {
+	if m.mapMetadata != "" {
+		return []string{"-map_metadata", m.mapMetadata}
+  }
+  return nil
+}
+    
+func (m *Mediafile) ObtainEncryptionKey() []string {
+	if m.encryptionKey != "" {
+		return []string{"-hls_key_info_file", m.encryptionKey}
+	}
+
+	return nil
+}
+
+func (m *Mediafile) ObtainBframe() []string {
+	if m.bframe != 0 {
+		return []string{"-bf", fmt.Sprintf("%d", m.bframe)}
+	}
+	return nil
+}
+
+func (m *Mediafile) ObtainTags() []string {
+	if m.tags != nil && len(m.tags) != 0 {
+		result := []string{}
+		for key, val := range m.tags {
+			result = append(result, []string{"-metadata", fmt.Sprintf("%s=%s", key, val)}...)
+		}
+		return result
+	}
+	return nil
+}
+
+func (m *Mediafile) ObtainRawInputArgs() []string {
+	return m.rawInputArgs
+}
+
+func (m *Mediafile) ObtainRawOutputArgs() []string {
+	return m.rawOutputArgs
 }
