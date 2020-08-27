@@ -80,6 +80,7 @@ type Mediafile struct {
 	encryptionKey         string
 	movflags              string
 	bframe                int
+	level                 string
 	pixFmt                string
 	rawInputArgs          []string
 	rawOutputArgs         []string
@@ -92,6 +93,10 @@ func (m *Mediafile) SetAudioFilter(v string) {
 
 func (m *Mediafile) SetVideoFilter(v string) {
 	m.videoFilter = v
+}
+
+func (m *Mediafile) SetLevel(v string) {
+	m.level = v
 }
 
 // Deprecated: Use SetVideoFilter instead.
@@ -398,6 +403,10 @@ func (m *Mediafile) Resolution() string {
 
 func (m *Mediafile) VideoBitrate() string {
 	return m.videoBitRate
+}
+
+func (m *Mediafile) Level() string {
+	return m.level
 }
 
 func (m *Mediafile) VideoBitRateTolerance() string {
@@ -719,6 +728,7 @@ func (m *Mediafile) ToStrCommand() []string {
 		"HlsListSize",
 		"HlsSegmentDuration",
 		"HlsInitTime",
+		"Level",
 		"HlsKeyInfoFile",
 		"HlsPlaylistType",
 		"HlsMasterPlaylistName",
@@ -753,6 +763,13 @@ func (m *Mediafile) ToStrCommand() []string {
 func (m *Mediafile) ObtainAudioFilter() []string {
 	if m.audioFilter != "" {
 		return []string{"-af", m.audioFilter}
+	}
+	return nil
+}
+
+func (m *Mediafile) ObtainLevel() []string {
+	if m.level != "" {
+		return []string{"-level", m.level}
 	}
 	return nil
 }
