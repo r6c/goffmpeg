@@ -816,7 +816,7 @@ func (m *Mediafile) ObtainHardwareAcceleration() []string {
 }
 
 func (m *Mediafile) ObtainForceKeyFrames() []string {
-	if m.hwaccel != "" {
+	if m.forceKeyframes != "" {
 		return []string{"-force_key_frames", m.forceKeyframes}
 	}
 	return nil
