@@ -67,6 +67,7 @@ type Mediafile struct {
 	hlsInitTime           int
 	httpMethod            string
 	httpKeepAlive         bool
+	forceKeyframes        string
 	hwaccel               string
 	streamIds             map[int]string
 	metadata              Metadata
@@ -93,6 +94,10 @@ func (m *Mediafile) SetAudioFilter(v string) {
 
 func (m *Mediafile) SetVideoFilter(v string) {
 	m.videoFilter = v
+}
+
+func (m *Mediafile) SetForceKeyFrames(v string) {
+	m.forceKeyframes = v
 }
 
 func (m *Mediafile) SetLevel(v string) {
@@ -405,6 +410,10 @@ func (m *Mediafile) VideoBitrate() string {
 	return m.videoBitRate
 }
 
+func (m *Mediafile) ForceKeyFrames() string {
+	return m.forceKeyframes
+}
+
 func (m *Mediafile) Level() string {
 	return m.level
 }
@@ -689,6 +698,7 @@ func (m *Mediafile) ToStrCommand() []string {
 		"InputPath",
 		"InputPipe",
 		"HideBanner",
+		"ForceKeyFrames",
 		"Aspect",
 		"Resolution",
 		"FrameRate",
@@ -801,6 +811,13 @@ func (m *Mediafile) ObtainAspect() []string {
 func (m *Mediafile) ObtainHardwareAcceleration() []string {
 	if m.hwaccel != "" {
 		return []string{"-hwaccel", m.hwaccel}
+	}
+	return nil
+}
+
+func (m *Mediafile) ObtainForceKeyFrames() []string {
+	if m.hwaccel != "" {
+		return []string{"-force_key_frames", m.forceKeyframes}
 	}
 	return nil
 }
